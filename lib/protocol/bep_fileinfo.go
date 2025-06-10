@@ -847,9 +847,18 @@ func unixOwnershipEqual(a, b *UnixData) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	ownerEqual := a.OwnerName == "" || b.OwnerName == "" || a.OwnerName == b.OwnerName
-	groupEqual := a.GroupName == "" || b.GroupName == "" || a.GroupName == b.GroupName
-	return a.UID == b.UID && a.GID == b.GID && ownerEqual && groupEqual
+	if a.UID != b.UID || a.GID != b.GID {
+		return false
+	}
+	ownerEmpty := a.OwnerName == "" || b.OwnerName == ""
+	groupEmpty := a.GroupName == "" || b.GroupName == ""
+	if ownerEmpty && groupEmpty {
+		return true
+	}
+	if a.OwnerName == b.OwnerName && a.GroupName == b.GroupName {
+		return true
+	}
+	return false
 }
 
 func windowsOwnershipEqual(a, b *WindowsData) bool {
