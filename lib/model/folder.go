@@ -632,6 +632,7 @@ func (b *scanBatch) Update(fi protocol.FileInfo) (bool, error) {
 			IgnoreBlocks:    true,
 			IgnoreFlags:     protocol.FlagLocalReceiveOnly,
 			IgnoreOwnership: !b.f.SyncOwnership && !b.f.SendOwnership,
+			IgnoreOwnerName: true,
 			IgnoreXattrs:    !b.f.SyncXattrs && !b.f.SendXattrs,
 		}):
 		// What we have locally is equivalent to the global file.

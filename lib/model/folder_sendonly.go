@@ -74,6 +74,7 @@ func (f *sendOnlyFolder) pull() (bool, error) {
 			ModTimeWindow:   f.modTimeWindow,
 			IgnorePerms:     f.IgnorePerms,
 			IgnoreOwnership: !f.SyncOwnership,
+			IgnoreOwnerName: false,
 			IgnoreXattrs:    !f.SyncXattrs,
 		}) {
 			continue

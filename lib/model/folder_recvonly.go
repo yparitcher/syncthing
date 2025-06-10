@@ -131,6 +131,7 @@ func (f *receiveOnlyFolder) revert() error {
 			ModTimeWindow:   f.modTimeWindow,
 			IgnoreFlags:     protocol.FlagLocalReceiveOnly,
 			IgnoreOwnership: !f.SyncOwnership,
+			IgnoreOwnerName: false,
 			IgnoreXattrs:    !f.SyncXattrs,
 		}):
 			// What we have locally is equivalent to the global file.

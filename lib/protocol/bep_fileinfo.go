@@ -11,6 +11,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"os/user"
+	"strconv"
 	"time"
 
 	"github.com/syncthing/syncthing/internal/gen/bep"
@@ -388,6 +390,7 @@ type FileInfoComparison struct {
 	IgnoreBlocks    bool
 	IgnoreFlags     uint32
 	IgnoreOwnership bool
+	IgnoreOwnerName bool
 	IgnoreXattrs    bool
 }
 
@@ -441,7 +444,7 @@ func (f FileInfo) isEquivalent(other FileInfo, comp FileInfoComparison) bool {
 	}
 
 	if !comp.IgnoreOwnership && f.Platform != other.Platform {
-		if !unixOwnershipEqual(f.Platform.Unix, other.Platform.Unix) {
+		if !unixOwnershipEqual(f.Platform.Unix, other.Platform.Unix, comp.IgnoreOwnerName) {
 			return false
 		}
 		if !windowsOwnershipEqual(f.Platform.Windows, other.Platform.Windows) {
@@ -840,7 +843,7 @@ func xattrsEqual(a, b *XattrData) bool {
 	return true
 }
 
-func unixOwnershipEqual(a, b *UnixData) bool {
+func unixOwnershipEqual(a, b *UnixData, IgnoreOwnerName bool) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -858,7 +861,21 @@ func unixOwnershipEqual(a, b *UnixData) bool {
 	if a.OwnerName == b.OwnerName && a.GroupName == b.GroupName {
 		return true
 	}
-	return false
+	if !IgnoreOwnerName {
+		return false
+	}
+
+	us, err := user.LookupId(strconv.Itoa(a.UID))
+	if err == nil && us.Username != a.OwnerName && us.Username != b.OwnerName {
+		return false
+	}
+
+	gr, err := user.LookupGroupId(strconv.Itoa(a.GID))
+	if err == nil && gr.Name != a.GroupName && gr.Name != b.GroupName {
+		return false
+	}
+
+	return true
 }
 
 func windowsOwnershipEqual(a, b *WindowsData) bool {

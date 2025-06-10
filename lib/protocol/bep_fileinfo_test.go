@@ -8,6 +8,8 @@ package protocol
 
 import (
 	"crypto/sha256"
+	"os/user"
+	"strconv"
 	"testing"
 
 	"github.com/syncthing/syncthing/lib/build"
@@ -229,6 +231,73 @@ func TestIsEquivalent(t *testing.T) {
 					t.Errorf("Case %d:\na: %v\nb: %v\nb.IsEquivalent(a, %v, %v) => %v, expected %v", i, tc.a, tc.b, ignPerms, ignBlocks, res, tc.eq)
 				}
 			}
+		}
+	}
+}
+
+func TestUnixOwnership(t *testing.T) {
+	if !build.IsLinux {
+		t.Skip("Unix ownership is tested on linux only")
+	}
+
+	current, err := user.Current()
+	if err != nil {
+		t.Skip("Cannot check unix ownership without a valid user")
+	}
+	group, err := user.LookupGroupId(current.Gid)
+	if err != nil {
+		t.Skip("Cannot check unix ownership without a valid group")
+	}
+	UID, err := strconv.Atoi(current.Uid)
+	if err != nil {
+		t.Skip("Cannot check unix ownership without a valid UID")
+	}
+	GID, err := strconv.Atoi(current.Gid)
+	if err != nil {
+		t.Skip("Cannot check unix ownership without a valid GID")
+	}
+
+	type testCase struct {
+		a            UnixData
+		b            UnixData
+		ignOwnerName bool
+		eq           bool
+	}
+	cases := []testCase{
+		{
+			a:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			b:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			ignOwnerName: false,
+			eq:           true,
+		},
+		{
+			a:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			b:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			ignOwnerName: true,
+			eq:           true,
+		},
+		{
+			a:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			b:            UnixData{OwnerName: "INCORRECT", GroupName: group.Name, UID: UID, GID: GID},
+			ignOwnerName: true,
+			eq:           true,
+		},
+		{
+			a:            UnixData{OwnerName: current.Username, GroupName: group.Name, UID: UID, GID: GID},
+			b:            UnixData{OwnerName: "INCORRECT", GroupName: group.Name, UID: UID, GID: GID},
+			ignOwnerName: false,
+			eq:           false,
+		},
+	}
+
+	for i, tc := range cases {
+		aFileInfo := FileInfo{Platform: PlatformData{Unix: &tc.a}}
+		bFileInfo := FileInfo{Platform: PlatformData{Unix: &tc.b}}
+		if res := aFileInfo.isEquivalent(bFileInfo, FileInfoComparison{IgnoreOwnerName: tc.ignOwnerName}); res != tc.eq {
+			t.Errorf("Case %d:\na: %v\nb: %v\na.UnixOwnership(b, ignOwnerName: %v) => %v, expected %v", i, tc.a, tc.b, tc.ignOwnerName, res, tc.eq)
+		}
+		if res := bFileInfo.isEquivalent(aFileInfo, FileInfoComparison{IgnoreOwnerName: tc.ignOwnerName}); res != tc.eq {
+			t.Errorf("Case %d:\na: %v\nb: %v\nb.UnixOwnership(a, ignOwnerName: %v) => %v, expected %v", i, tc.a, tc.b, tc.ignOwnerName, res, tc.eq)
 		}
 	}
 }
